@@ -1,0 +1,21 @@
+#resultparentresults {
+	display:none;
+	max-height: 40vh;
+	overflow-y: auto;
+	width: 100%;
+	overflow-x: hidden;
+	border-radius: 4px;
+	border: 1px solid #8c8f94;
+}
+.dynaparentoption {
+	list-style: none;
+}
+.dynaparentoption .parentlink {
+	display: block;
+	background: #f6f7f7;
+	padding: 6px;
+	transition: 0.4s all;
+}
+.dynaparentoption .parentlink:hover {
+	background-color: #f2f2f2;
+}
