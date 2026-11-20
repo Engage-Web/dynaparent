@@ -1,4 +1,4 @@
-=== Plugin Name ===
+=== Dynaparent - Dynamic Parent Filter ===
 
 Contributors: StuckOn_dev, nickarkell
 Tags: parent page, dynamic list, parent, classic editor
