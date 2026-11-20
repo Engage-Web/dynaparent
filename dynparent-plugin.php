@@ -10,15 +10,22 @@ License: GPL2
 Text Domain: dynaparent
 */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /*************************************************************/
 
 add_action( 'wp_ajax_check_parent', 'dynaparent_ajax_check_parent' );
 
 function dynaparent_ajax_check_parent() {
+	check_ajax_referer( 'dynaparent_search', 'nonce' );
 
-	$args = array( 's' => $_POST[ 'data' ], 'posts_per_page' => 2000000, 'post_type' => 'page', 'orderby' => 'post_title', 'order' => 'ASC' );
+	$search = isset( $_POST['data'] ) ? sanitize_text_field( stripslashes( $_POST['data'] ) ) : '';
+	$args   = array( 's' => $search, 'posts_per_page' => 2000000, 'post_type' => 'page', 'orderby' => 'post_title', 'order' => 'ASC' );
 
 	$the_query = new WP_Query( $args );
+	$parents   = array();
 
 	// The Loop
 
@@ -26,23 +33,23 @@ function dynaparent_ajax_check_parent() {
 		while ( $the_query->have_posts() ) {
 			$the_query->the_post();
 			$postdata = get_post();
-			$postdatasearch = strtolower( $_POST[ 'data' ] );
+			$postdatasearch = strtolower( $search );
 			$titlesearch = strtolower( get_the_title( $postdata ) );
-			if ( str_contains( $titlesearch, $postdatasearch ) ) {
-				$parentname[] = $postdata;
+			if ( false !== strpos( $titlesearch, $postdatasearch ) ) {
+				$parents[] = $postdata;
 			}
 		}
 	}
 
-	foreach ( $parentname as $parent ) {
-		$parent_title = get_the_title( $parent->post_parent );
-		if ( $parent_title != '' ) {
-			$parent_title = $parent_title . ">><br>";
-		}
-		$statecheck = get_post( $parent->post_parent );
-		$parent_state = get_the_title( $statecheck->post_parent );
-		echo "<li class='dynaparentoption'><a class=\"parentlink\" style=\"cursor:pointer;\" parentname='" . $parent->post_title . "' parentid='" . $parent->ID . "'>" . $parent->post_title . "</a></li>\n";
+	foreach ( $parents as $parent ) {
+		printf(
+			'<li class="dynaparentoption"><a class="parentlink" style="cursor:pointer;" parentname="%1$s" parentid="%2$d">%3$s</a></li>',
+			esc_attr( $parent->post_title ),
+			(int) $parent->ID,
+			esc_html( $parent->post_title )
+		);
 	}
+	wp_reset_postdata();
 
 	echo '<script language="javascript" type="text/javascript">
 					jQuery(".parentlink").bind(\'click\', function() {
@@ -56,14 +63,14 @@ function dynaparent_ajax_check_parent() {
 					jQuery("#parent_id").val(parentid);
 					});
 			</script>';
-	die();
+	wp_die();
 }
 
 function dynaparent_register_head() {
 	$url = plugins_url( '/dynaparentstyle.css', __FILE__ );
-	echo "<link rel='stylesheet' type='text/css' href='$url' />\n";
+	wp_enqueue_style( 'dynaparent', $url, array(), '2.1.0' );
 }
-add_action( 'admin_head', 'dynaparent_register_head' );
+add_action( 'admin_enqueue_scripts', 'dynaparent_register_head' );
 
 function dynapar_add_theme_menus() {
 	
@@ -76,7 +83,7 @@ function dynapar_add_theme_menus() {
 		$oldgutenberg = is_gutenberg_page();
 	}
 	if (is_admin() && $gutenberg == false && $oldgutenberg == false) {
-		add_meta_box( 'pageparentdiv', __( 'Page Attributes' ), 'dynapar_box', 'page', 'side', 'core' );
+		add_meta_box( 'pageparentdiv', __( 'Page Attributes', 'dynaparent' ), 'dynapar_box', 'page', 'side', 'core' );
 	}
 }
 
@@ -84,7 +91,7 @@ add_action( 'current_screen', 'dynapar_add_theme_menus' );
 
 function dynapar_box( $post ) {
 	echo '<input type="hidden" name="taxonomy_noncename" id="taxonomy_noncename" value="' .
-	wp_create_nonce( 'taxonomy_theme' ) . '" />';
+	esc_attr( wp_create_nonce( 'taxonomy_theme' ) ) . '" />';
 	$pluginurl = plugin_dir_path( __FILE__ );
 	wp_enqueue_script( 'jquery' );
 	wp_enqueue_script( 'jquery-effects-core' );
@@ -117,7 +124,7 @@ function dynapar_box( $post ) {
 		} else {
 			$select = '';
 		}
-		$themeselect .= '<option value="' . $template_filename . '" ' . $select . '>' . $template_name . '</option>';
+		$themeselect .= '<option value="' . esc_attr( $template_filename ) . '" ' . $select . '>' . esc_html( $template_name ) . '</option>';
 	}
 	$themeselect .= '</select>';
 
@@ -125,20 +132,20 @@ function dynapar_box( $post ) {
 	<p class="post-attributes-label-wrapper page-template-label-wrapper">
 		<label class="post-attributes-label" for="page_template">Template</label>
 	</p>
-	<?php echo $themeselect;?>
+	<?php echo wp_kses( $themeselect, array( 'select' => array( 'id' => true, 'name' => true ), 'option' => array( 'value' => true, 'selected' => true ) ) ); ?>
 	<p class="post-attributes-label-wrapper menu-order-label-wrapper">
 		<label class="post-attributes-label" for="menu_order">Order</label>
 	</p>
-	<input name="menu_order" type="text" size="4" id="menu_order" value="<?php echo $menu_order; ?>">
+	<input name="menu_order" type="text" size="4" id="menu_order" value="<?php echo esc_attr( $menu_order ); ?>">
 	<p class="post-attributes-label-wrapper parent-id-label-wrapper">
 		<label class="post-attributes-label" for="parent_id">Parent</label>
 	</p>
-	<p>Current Parent: <?php echo $parent_page; ?></p>
+	<p>Current Parent: <?php echo esc_html( $parent_page ); ?></p>
 	<p>Search for a parent in the box below, click on a new parent from the results and make sure you click the 'Update' button to save this change.</p>
 	<p>
 		<input type="text" name="filterbox" id="parentfilbox" autocomplete="off" placeholder="Search for new parent..." style="width:100%">
 		<br/>
-		<span id="new-parent"></span><input type="hidden" name="parent_id" id="parent_id" readonly="readonly" value="<?php echo $post->post_parent; ?>"></p>
+		<span id="new-parent"></span><input type="hidden" name="parent_id" id="parent_id" readonly="readonly" value="<?php echo esc_attr( $post->post_parent ); ?>"></p>
 	<div id="resultparent">
 		<p id="resultparenttitle"><strong>Select new parent...</strong></p>
 		<p id="resultparentloader"></p>
@@ -152,6 +159,7 @@ function dynapar_box( $post ) {
 		var checkparent = function () {
 			jQuery.post(ajaxurl, {
 				'action':'check_parent',
+				'nonce':'<?php echo esc_js( wp_create_nonce( 'dynaparent_search' ) ); ?>',
 				'data':jQuery("#parentfilbox").val()
 			}, function(response){
 				jQuery('#resultparenttitle').fadeIn();
@@ -160,11 +168,11 @@ function dynapar_box( $post ) {
 				jQuery("#resultparentloader").empty().append('');
 			});
 		};
-		jQuery("#resultparentloader").empty().append( '<img src="<?php echo $pluginurl; ?>" alt="" class="loading">');
+		jQuery("#resultparentloader").empty().append( '<img src="<?php echo esc_url( $pluginurl ); ?>" alt="" class="loading">');
 		timer && clearTimeout(timer);
 		timer = setTimeout(checkparent, 600);
 		jQuery("#parentfilbox").keyup(function() {
-			jQuery("#resultparentloader").empty().append( '<img src="<?php echo $pluginurl; ?>" alt="" class="loading">');
+			jQuery("#resultparentloader").empty().append( '<img src="<?php echo esc_url( $pluginurl ); ?>" alt="" class="loading">');
 			timer && clearTimeout(timer);
 			timer = setTimeout(checkparent, 600);
 		});		
