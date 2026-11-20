@@ -4,7 +4,7 @@ Plugin Name: Dynaparent - Dynamic Parent Filter
 Plugin URI: https://www.engageweb.co.uk/web-services/wordpress-plugin-development
 Description: Dynamic filtering of Parent pages
 Author: Engage Web, Steven Morris, Nick Arkell
-Version: 2.1.0
+Version: 2.1.1
 Author URI: https://www.engageweb.co.uk
 License: GPL2
 Text Domain: dynaparent
